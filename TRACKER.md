@@ -13,12 +13,12 @@
 | Phase | Tasks | Done | Target |
 |---|---|---|---|
 | 0 — Foundations | 5 | 5 | Wed Oct 28 |
-| 1 — Audit tools | 13 | 1 | Thu Oct 29 (spill Fri AM) |
+| 1 — Audit tools | 13 | 13 | Fri Oct 30 |
 | 2 — Verdict & benchmark | 3 | 0 | Fri Oct 30 |
 | 3 — Agents & orchestration | 7 | 0 | Fri Oct 30 – Sat Oct 31 |
 | 4 — Experiments | 3 | 0 | Sat Oct 31 |
 | 5 — UI & delivery | 4 | 0 | Sat Oct 31 – Sun Nov 1 |
-| **Total** | **35** | **6** | |
+| **Total** | **35** | **18** | |
 
 ---
 
@@ -37,18 +37,18 @@
 | ID | Task | Owner | Depends on | Status | Done when | Reference |
 |---|---|---|---|---|---|---|
 | T1.1 | Causality truncation test | Devin | T0.5 | DONE | `shift(-1)` fails; clean MA passes | Kaufman et al. 2012 (own contribution) — **critical path**. Determinism pre-check; truncate + mirror + noise checks (complementary, each proven by a test); look-ahead depth lower bound, local/global scope, leaking columns; point-in-time honest re-run. Hypothesis: 100% detection of negative lags, 0 false positives. 2520x50: test 0.6 s, honest re-run 14.6 s (1 call/bar). Sandbox (T3.1) must run the tool *inside* the container to avoid per-call container cost |
-| T1.2 | AST look-ahead scanner | Devin | T0.1 | TODO | 3 fixtures flagged | Kaufman et al. 2012 |
-| T1.3 | Purged + embargoed CV | Devin | T0.5 | TODO | Leak appears w/o purge, gone with | López de Prado 2018 |
-| T1.4 | PSR + MinTRL | Devin | T0.5 | TODO | Paper numbers reproduced | Bailey & LdP 2012 |
-| T1.5 | Deflated Sharpe | Devin | T1.4 | TODO | Paper example reproduced | Bailey & LdP 2014 |
-| T1.6 | PBO / CSCV | Devin | T0.5 | TODO | Noise set PBO ≈ 0.5 | Bailey et al. 2017 |
-| T1.7 | Haircut Sharpe | Devin | T1.4 | TODO | Paper example reproduced | Harvey & Liu 2015 |
-| T1.8 | Permutation / placebo null | Devin | T0.5 | TODO | p ~ uniform under null | White 2000; STW 1999; Phipson & Smyth 2010 |
-| T1.9 | Stationary bootstrap Sharpe CI | Devin | T0.5 | TODO | ~95% coverage | Politis & Romano 1994; Politis & White 2004 |
-| T1.10 | Cost sweep + parameter neighbourhood | Devin | T0.5 | TODO | High-turnover collapses | Novy-Marx & Velikov 2016 |
-| T1.11 | Subperiod stability + sup-Wald | Devin | T0.5 | TODO | Regime strategy flagged | Andrews 1993 |
-| T1.12 | Claim consistency (implied vs claimed) | Devin | T1.4 | TODO | Impossible claim flagged | Bailey & LdP 2012; DePlot 2023 |
-| T1.13 | Tool registry + Evidence emission + citations | Devin | T1.1–T1.12 | TODO | Registry lists 12 tools with refs | |
+| T1.2 | AST look-ahead scanner | Devin | T0.1 | DONE | 3 fixtures flagged | Kaufman et al. 2012. 12 rules (look-ahead, same-bar P&L, unseeded RNG, hard-coded dates, security allowlist); constant resolution (`LAG=-2`); findings capped at HIGH (static = suspicion). 10 fixture strategies; **static and dynamic (T1.1) verdicts agree on all 7**. `security_findings()` = sandbox pre-check for T3.1 |
+| T1.3 | Purged + embargoed CV | Devin | T0.5 | DONE | Leak appears w/o purge, gone with | López de Prado 2018. Purged K-fold + embargo + CPCV (splits, path assembly); audits the *selection procedure* over a trial set. 1-NN overlapping-label demo: OOS corr > 0.4 unpurged, ~0 purged |
+| T1.4 | PSR + MinTRL | Devin | T0.5 | DONE | Paper numbers reproduced | Bailey & LdP 2012. Identity PSR(MinTRL)=1-alpha; Monte-Carlo size calibration; documented finite-sample limit at extreme skew (8% vs 5%) |
+| T1.5 | Deflated Sharpe | Devin | T1.4 | DONE | Paper example reproduced | Bailey & LdP 2014. **Reproduces paper example: SR0 = 0.1132, DSR = 0.90**; E[max SR] vs Monte Carlo; effective trials (participation ratio) |
+| T1.6 | PBO / CSCV | Devin | T0.5 | DONE | Noise set PBO ≈ 0.5 | Bailey et al. 2017. Vectorised via group sufficient statistics (12,870 splits in one matmul); equals brute force; noise ≈ 0.5, real edge ≈ 0 |
+| T1.7 | Haircut Sharpe | Devin | T1.4 | DONE | Paper example reproduced | Harvey & Liu 2015. Bonferroni/Holm/BHY on *actual* trial p-values; Lo (2002) autocorrelation-corrected annualisation (AR(1) closed form). Known adjusted-p values tested (paper's own example not reproduced — not recalled reliably) |
+| T1.8 | Permutation / placebo null | Devin | T0.5 | DONE | p ~ uniform under null | White 2000; STW 1999; Phipson & Smyth 2010. Circular-shift + run-block placebos (turnover ratio 1.00), p-values uniform (KS). **Plus tool 13 `data_snooping`: White RC + Hansen SPA (l/c/u)** |
+| T1.9 | Stationary bootstrap Sharpe CI | Devin | T0.5 | DONE | ~95% coverage | Politis & Romano 1994; Politis & White 2004 / PPW 2009 block length; coverage test under AR(0.3); Ledoit-Wolf HAC Sharpe-difference test (size ~5%) |
+| T1.10 | Cost sweep + parameter neighbourhood | Devin | T0.5 | DONE | High-turnover collapses | Novy-Marx & Velikov 2016. Break-even bps (sweep + analytic cross-check), execution-delay decay + half-life; parameter plateau vs isolated peak. Registered as two tools (10a, 10b) |
+| T1.11 | Subperiod stability + sup-Wald | Devin | T0.5 | DONE | Regime strategy flagged | Andrews 1993. **Simulated null matches Andrews' critical values (7.17 / 8.85 / 12.35)**; HAC equal-means Wald ~ chi2; break date located |
+| T1.12 | Claim consistency (implied vs claimed) | Devin | T1.4 | DONE | Impossible claim flagged | Kelly growth bound; MDD plausibility (normal for 'too small', t4 for 'too large'), simulation validated vs Magdon-Ismail closed form; MinTRL; digitised-curve CAGR/MDD/Sharpe; replication gap |
+| T1.13 | Tool registry + Evidence emission + citations | Devin | T1.1–T1.12 | DONE | Registry lists 12 tools with refs | 14 registered tools (sections 1–13, 10a/10b), each cited; `TrialContext` with cached weights/backtest/trial set; missing inputs & tool failures -> inconclusive evidence (never raised, never silent); `catalogue()` for the Prosecutor; always-on arraignment = causality, ast_scanner, claim_consistency |
 
 ## Phase 2 — Verdict & benchmark
 
@@ -110,6 +110,8 @@
 | 2026-10-28 | D5 | Proceed without Meta API; Protocol + replay until details arrive | User |
 | 2026-10-28 | D6 | Research-backed methods with citations throughout | User |
 | 2026-10-28 | — | Keep full technical depth; quant-focused framing (intentional) | User |
+| 2026-10-30 | D12 | Added tool 13 `data_snooping` (White RC + Hansen SPA); T1.10 registered as two tools -> 14 registered tools | Devin |
+| 2026-10-30 | D13 | Benchmark design note: with t+1 fills a lag-1 signal monetises only ar1^2, and a 1-bar peek earns ~nothing; plant monetisable signals/leaks (e.g. 2-bar peeks) in T2.2 | Devin |
 | 2026-10-30 | D11 | Keep full technical depth everywhere; internal deadline moved from Sun Nov 1 to **Tue Nov 3** (official deadline Nov 4) | User |
 | 2026-10-28 | D9 | Execution: next open if available, else next close (configurable) | User |
 | 2026-10-28 | D10 | Engine is pure numpy (no C++, no numba); batched paths for throughput | User |
@@ -128,6 +130,8 @@
 | 2026-10-28 | T0.1 done: scaffold, uv env (pinned via uv.lock), ruff/mypy strict/pytest green, CI workflow |
 | 2026-10-28 | T0.2 done: schemas (Hypothesis, StrategySpec, Evidence+Citation, Verdict, TrialTrace), 12 tests green |
 | 2026-10-28 | T0.3 done: LLM layer (Protocol, FakeProvider, replay cache, cost/budget, structured output) |
+| 2026-10-30 | T1.2–T1.13 done: all audit tools + registry; 181 tests green (incl. slow calibration). **Phase 1 complete** |
+| 2026-10-30 | First push to GitHub (`4b9913a`, merged remote README); CI green on GitHub Actions. Auth: fine-grained PAT scoped to this repo (Contents + Workflows RW) |
 | 2026-10-30 | T1.1 done: causality test + honest re-run; 96 tests green |
 | 2026-10-28 | T0.5 done: backtest engine + metrics + Strategy protocol + reference strategies; 82 tests green. **Phase 0 complete** |
 | 2026-10-28 | T0.4 done: DataStore (Parquet + hash manifest), yfinance loader (mocked tests + 1 opt-in network test), GARCH-t / weak-signal / survivorship generators; 41 tests green |

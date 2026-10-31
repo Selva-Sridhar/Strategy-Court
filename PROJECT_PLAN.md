@@ -128,7 +128,7 @@ After the Judge writes its opinion, the validator extracts every number and chec
 
 ---
 
-## 6. Audit tools (12 + registry)
+## 6. Audit tools (13 families, 14 registered tools + registry)
 
 | # | Tool | Known-answer test | Reference |
 |---|---|---|---|
@@ -143,7 +143,10 @@ After the Judge writes its opinion, the validator extracts every number and chec
 | 9 | Stationary bootstrap Sharpe CI | ~95% coverage on simulated data | Politis & Romano (1994); Politis & White (2004); Ledoit & Wolf (2008); Lo (2002) |
 | 10 | Cost/slippage sweep + parameter-neighbourhood sensitivity | High-turnover strategy collapses at realistic costs | Novy-Marx & Velikov (2016) |
 | 11 | Subperiod stability + sup-Wald break test | Planted regime-dependent strategy flagged | Andrews (1993); McLean & Pontiff (2016) |
-| 12 | Claim consistency (implied vs claimed Sharpe / MDD / MinTRL from digitised curve) | Impossible "Sharpe 3, 45% MDD" flagged | Bailey & López de Prado (2012); Liu et al. (2023, DePlot) |
+| 12 | Claim consistency (Kelly growth bound, MDD plausibility, MinTRL, digitised curve, replication gap) | Impossible "Sharpe 3, 45% MDD" flagged | Kelly (1956); Magdon-Ismail et al. (2004); Bailey & López de Prado (2012); Liu et al. (2023, DePlot) |
+| 13 | Data snooping across trials (White Reality Check, Hansen SPA) | Real edge found; SPA robust to adding poor trials | White (2000); Hansen (2005) |
+
+Tool 10 is registered as two tools: `cost_sensitivity` (10a, incl. execution-delay decay) and `parameter_sensitivity` (10b). Static findings (tool 2) are capped at HIGH; only the dynamic causality test (tool 1) can produce CRITICAL evidence. Implementation status and verification notes per tool: `TRACKER.md`, Phase 1.
 | — | Tool registry | Lists all tools + references | — |
 
 Additional mechanism: **K-interpretation multiverse** — for text/screenshot claims Coder generates K plausible implementations; K is added to DSR's trial count and the Sharpe spread across K is reported (Simonsohn, Simmons & Nelson, 2020).

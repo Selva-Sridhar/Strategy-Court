@@ -50,6 +50,7 @@ markers = [
 line-length = 100
 target-version = "py312"
 src = ["src", "tests"]
+extend-exclude = ["tests/fixtures"]  # deliberately flawed strategy sources, scanned not linted
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "N", "SIM", "RUF", "NPY", "PD"]

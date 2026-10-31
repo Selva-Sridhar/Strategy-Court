@@ -88,7 +88,10 @@ def weak_signal_prices(
     seed: int = 0,
     params: GarchParams = DEFAULT_GARCH,
 ) -> pd.DataFrame:
-    """Prices with a small, known short-horizon momentum (lag-1 autocorrelation ~ `ar1`)."""
+    """Prices with a small, known short-horizon momentum (lag-k autocorrelation ~ `ar1`**k).
+
+    Note for benchmark design: the engine fills at t+1, so a signal formed at close t earns the
+    return of bar t+2; a lag-1 momentum rule therefore monetises only ~`ar1`**2."""
     rng = np.random.default_rng(seed)
     return _to_prices(garch_t_returns(n_days, n_assets, rng, params, ar1=ar1))
 

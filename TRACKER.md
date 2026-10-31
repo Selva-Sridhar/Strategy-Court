@@ -62,7 +62,7 @@
 
 | ID | Task | Owner | Depends on | Status | Done when | Notes |
 |---|---|---|---|---|---|---|
-| T3.1 | Docker sandbox runner + image + AST pre-check | Devin | T0.5 | TODO | Malicious fixtures blocked | Docker tests run on user's PoC machine (D8) |
+| T3.1 | Docker sandbox runner + image + AST pre-check | Devin | T0.5 | REVIEW | Malicious fixtures blocked | 3 layers: static pre-check -> in-container *court process + separate untrusted worker* (runtime import guard, numeric-only `.npy` IPC with `allow_pickle=False`, result token the strategy never sees) -> container (`--network none --read-only --cap-drop ALL no-new-privileges`, non-root, mem/cpu/pids caps, noexec tmpfs, wall-clock kill of the whole process tree). Tasks: smoke, signals(grid), causality, point_in_time — tools run *inside* one container. 11 local tests green (same runner via `TrustedLocalSandbox`, repo code only); 7 Docker isolation tests (network, read-only FS, setuid, memory, fork, timeout) run in CI. **DONE once CI confirms the Docker tests** |
 | T3.2 | Intake agent (vision → Hypothesis + digitised curve; optional SAM crop) | Devin | T0.3 | TODO | 5 sample claims parse | Needs B1 for live run |
 | T3.3 | Coder agent (K interpretations, self-debug ≤ 3, K → DSR trials) | Devin | T3.1, T0.3 | TODO | K versions pass smoke test | Needs B1 for live run |
 | T3.4 | Prosecutor agent (ReAct tool selection, budget, logged) | Devin | T1.13, T0.3 | TODO | Picks causality + cost on high-turnover | |
@@ -133,6 +133,7 @@
 | 2026-10-28 | T0.1 done: scaffold, uv env (pinned via uv.lock), ruff/mypy strict/pytest green, CI workflow |
 | 2026-10-28 | T0.2 done: schemas (Hypothesis, StrategySpec, Evidence+Citation, Verdict, TrialTrace), 12 tests green |
 | 2026-10-28 | T0.3 done: LLM layer (Protocol, FakeProvider, replay cache, cost/budget, structured output) |
+| 2026-10-30 | T3.1 sandbox implemented; 217 local tests green, Docker tests pending CI |
 | 2026-10-30 | Rubric 1.2.0 + fresh held-out (200-209) results; 206 tests green |
 | 2026-10-30 | T2.1–T2.3 done: rubric 1.1.0, benchmark cases + harness, held-out results committed; 204 tests green. **Phase 2 complete** |
 | 2026-10-30 | T1.2–T1.13 done: all audit tools + registry; 181 tests green (incl. slow calibration). **Phase 1 complete** |

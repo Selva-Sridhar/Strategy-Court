@@ -31,6 +31,8 @@ Plan and design: `PROJECT_PLAN.md`. Status: `TRACKER.md` (update it when startin
 ## Testing rule — IMPORTANT
 - On the authoring machine, **never call the yfinance API** (or any market-data network service). Real-data code is tested with mocks only.
 - All functional testing here uses **synthetic data**. The user runs real-data, Docker and live-LLM tests on their own PoC machine.
+- **Never call the Meta Model API (or any LLM API) from this machine.** Agents are tested here with `FakeProvider` / the replay cache; live calls (`live_llm`) run only on the PoC.
+- Docker isolation tests (`docker` marker) run in GitHub Actions CI (Docker available) and on the PoC. Pushing to the personal GitHub repo is allowed (still ask before each commit/push).
 
 ## Quant rigor standard — IMPORTANT
 Every quant method must be implemented to maximum technical depth:

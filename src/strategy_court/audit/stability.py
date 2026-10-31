@@ -97,11 +97,17 @@ class StabilityResult:
     sharpe_before: float
     sharpe_after: float
     rolling_sharpe: pd.Series
+    overall_sharpe: float = float("nan")
 
     def to_evidence(self, strategy_id: str) -> Evidence:
         broke = self.sup_wald_p < 0.05
         decayed = broke and self.sharpe_after < 0.5 * self.sharpe_before
-        if self.frac_blocks_positive < 0.5 or decayed:
+        no_edge = not self.overall_sharpe > 0
+        if decayed:  # an edge that existed and died is regime dependence even if the total is <= 0
+            sev = Severity.HIGH
+        elif no_edge:  # without an edge there is no stability to judge (skill question)
+            sev = Severity.INFO
+        elif self.frac_blocks_positive < 0.5:
             sev = Severity.HIGH
         elif broke or self.wald_p < 0.05 or self.frac_blocks_positive < 0.8:
             sev = Severity.MEDIUM
@@ -172,6 +178,7 @@ def stability_test(
         sharpe_before=sharpe_per_period(x[:tau]) * ann if tau > 0 else float("nan"),
         sharpe_after=sharpe_per_period(x[tau:]) * ann if tau > 0 else float("nan"),
         rolling_sharpe=rolling,
+        overall_sharpe=sharpe_per_period(x) * ann,
     )
 
 

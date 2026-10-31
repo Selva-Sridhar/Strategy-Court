@@ -13,6 +13,7 @@ from strategy_court.data.synthetic import (
     garch_t_returns,
     random_walk_prices,
     survivorship_universe,
+    trending_signal_prices,
     weak_signal_prices,
 )
 from strategy_court.data.yahoo import load_prices
@@ -29,5 +30,6 @@ __all__ = [
     "load_prices",
     "random_walk_prices",
     "survivorship_universe",
+    "trending_signal_prices",
     "weak_signal_prices",
 ]

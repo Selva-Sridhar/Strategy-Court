@@ -79,12 +79,19 @@ def test_every_tool_runs_end_to_end_and_serialises() -> None:
     ctx = full_context()
     evidence = run_tools(list(TOOLS), ctx)
     assert [e.tool for e in evidence] == list(TOOLS)
+    # The court's own neighbourhood is a *probe*, not the claimant's search: with no disclosed
+    # trial count, selection-bias deflation is explicitly not applicable.
+    undisclosed = {"deflated_sharpe", "haircut_sharpe", "data_snooping"}
     for ev in evidence:
-        assert ev.details.get("status") != "inconclusive" or ev.tool == "parameter_sensitivity", ev
+        assert (ev.details.get("status") == "inconclusive") == (ev.tool in undisclosed), ev
         assert Evidence.model_validate_json(ev.model_dump_json()) == ev
         assert ev.citations
     ids = [e.id for e in evidence]
     assert len(set(ids)) == len(ids)
+    ctx.extra_trials = 20  # claimant discloses the size (not the returns) of a 21-config search
+    for ev in run_tools(["deflated_sharpe", "haircut_sharpe"], ctx):
+        assert ev.details.get("status") != "inconclusive"
+        assert ev.details["n_trials"] == 21
 
 
 def test_leaky_strategy_is_convicted_with_honest_rerun() -> None:

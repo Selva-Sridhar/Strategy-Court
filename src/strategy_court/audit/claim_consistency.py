@@ -19,7 +19,9 @@ insufficient / not_checkable.
    compared with the claim; the curve's drawdown is a *lower bound* (sampling misses intra-point
    dips), so a claimed MDD smaller than it is a contradiction.
 5. Replication gap: claimed Sharpe vs the best of K independent implementations of the claim,
-   in units of the Sharpe standard error (Lo 2002).
+   in units of the Sharpe standard error (Lo 2002): > 3 SE contradiction, 2-3 SE doubtful.
+   The SE of the claimed estimate alone is used; claim and replication share data in most cases,
+   which makes the true SE of their difference smaller, so the z-score is conservative.
 """
 
 import math
@@ -42,7 +44,9 @@ from strategy_court.schemas import CurvePoint, Evidence, Hypothesis, Severity
 
 TOOL = "claim_consistency"
 CITATIONS = (KELLY_1956, MAGDON_ISMAIL_2004, BAILEY_LDP_2012, LO_2002, LIU_2023_DEPLOT)
-Status = Literal["consistent", "implausible", "contradiction", "insufficient", "not_checkable"]
+Status = Literal[
+    "consistent", "doubtful", "implausible", "contradiction", "insufficient", "not_checkable"
+]
 PPY = 252
 
 
@@ -243,6 +247,14 @@ def replication_check(sharpe: float, years: float, replicated: Sequence[float]) 
             f"Sharpe {sharpe:.2f} (best {best:.2f}, {z:.1f} standard errors short).",
             vals,
         )
+    if z > 2:
+        return Finding(
+            "replication",
+            "doubtful",
+            f"The best of {len(replicated)} implementations reaches Sharpe {best:.2f} vs "
+            f"{sharpe:.2f} claimed ({z:.1f} standard errors short).",
+            vals,
+        )
     return Finding(
         "replication", "consistent", "At least one implementation reproduces the claim.", vals
     )
@@ -262,14 +274,25 @@ class ClaimReport:
     findings: tuple[Finding, ...]
 
     def to_evidence(self, strategy_id: str) -> Evidence:
+        # A too-short track record is missing evidence, not a flaw: reported (LOW, unflagged) so the
+        # Judge can say so, but it cannot by itself count towards a conviction.
         bad = [f for f in self.findings if f.status in ("implausible", "contradiction")]
-        weak = [f for f in self.findings if f.status == "insufficient"]
+        doubtful = [f for f in self.findings if f.status == "doubtful"]
+        short = [f for f in self.findings if f.status == "insufficient"]
         checked = [f for f in self.findings if f.status != "not_checkable"]
-        sev = Severity.HIGH if bad else Severity.MEDIUM if weak else Severity.INFO
+        sev = (
+            Severity.HIGH
+            if bad
+            else Severity.MEDIUM
+            if doubtful
+            else Severity.LOW
+            if short
+            else Severity.INFO
+        )
         if bad:
             summary = "Claim is internally inconsistent: " + " ".join(f.message for f in bad)
-        elif weak:
-            summary = weak[0].message
+        elif doubtful or short:
+            summary = " ".join(f.message for f in (*doubtful, *short))
         elif checked:
             summary = f"All {len(checked)} consistency checks passed."
         else:
@@ -277,7 +300,7 @@ class ClaimReport:
         return make_evidence(
             TOOL,
             strategy_id,
-            flag=bool(bad or weak),
+            flag=bool(bad or doubtful),
             severity=sev,
             statistic_name="n_inconsistencies",
             statistic=float(len(bad)),

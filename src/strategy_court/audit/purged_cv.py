@@ -121,14 +121,17 @@ class PurgedCVResult:
         frac_neg = (
             float((self.path_sharpes <= 0).mean()) if self.path_sharpes.size else float("nan")
         )
-        weak = not (self.oos_psr >= 0.95)
-        sev = (
-            Severity.HIGH
-            if oos_ann <= 0
-            else Severity.MEDIUM
-            if weak or (math.isfinite(degradation) and degradation > 0.5)
-            else Severity.INFO
-        )
+        # Flags measure the *selection* flaw (in-sample edge that does not survive out of sample).
+        # Whether the OOS edge is statistically significant is a skill question for the
+        # significance tools, so it is reported (oos_psr) but not flagged here.
+        if self.is_sharpe <= 0:
+            sev = Severity.INFO
+        elif oos_ann <= 0:
+            sev = Severity.HIGH
+        elif math.isfinite(degradation) and degradation > 0.5:
+            sev = Severity.MEDIUM
+        else:
+            sev = Severity.INFO
         return make_evidence(
             TOOL,
             strategy_id,

@@ -21,9 +21,11 @@ htmlcov/
 data_cache/
 *.parquet
 
-# Run artefacts
+# Run artefacts (official benchmark results are committed under docs/benchmark/)
 runs/
 benchmark/results/tmp/
+benchmark_results*/
+benchmark_*_log.txt
 
 # Node / web
 node_modules/

@@ -12,6 +12,7 @@ from strategy_court.audit.dsr import (
     dsr_evidence,
     dsr_test,
     effective_trials,
+    effective_trials_for_max,
     expected_max_sharpe,
 )
 from strategy_court.audit.haircut import (
@@ -118,6 +119,18 @@ def test_expected_max_sharpe_matches_monte_carlo() -> None:
     assert expected_max_sharpe(1, 1.0) == 0.0
 
 
+def test_effective_trials_for_max_counts_sign_flips_and_correlation() -> None:
+    rng = np.random.default_rng(11)
+    iid = rng.standard_normal((3000, 50))
+    assert effective_trials_for_max(iid) == pytest.approx(50, rel=0.2)
+    clones = np.repeat(rng.standard_normal((3000, 1)), 30, axis=1) + 1e-6 * iid[:, :30]
+    assert effective_trials_for_max(clones) < 1.5
+    base = rng.standard_normal((3000, 20))
+    pairs = np.hstack([base, -base])  # trend and contrarian versions of 20 rules
+    assert effective_trials(pairs) == pytest.approx(20, rel=0.1)  # participation ratio: 20
+    assert effective_trials_for_max(pairs) == pytest.approx(40, rel=0.3)  # selection sees ~40
+
+
 def test_dsr_decreases_with_trials_and_effective_trials_bounds() -> None:
     values = [deflated_sharpe_ratio(0.1, 1000, 0, 3, n, 0.002)[0] for n in (2, 10, 100, 1000)]
     assert all(a > b for a, b in itertools.pairwise(values))
@@ -179,9 +192,15 @@ def test_haircut_single_trial_is_zero_and_grows_with_trials() -> None:
     assert res.adjusted_p["holm"] == pytest.approx(res.adjusted_p["bonferroni"])  # others null
 
 
-def test_haircut_evidence_uses_actual_trials() -> None:
+def test_haircut_evidence_decides_on_effective_trials() -> None:
     rng = np.random.default_rng(8)
     noise = TrialSet.from_returns(rng.normal(0, 0.01, (1260, 100)))
     ev = haircut_evidence(noise, "s")
-    assert ev.flag and ev.details["used_actual_trial_pvalues"] is True
-    assert ev.details["n_trials"] == 100
+    assert ev.flag and ev.details["raw_trials"] == 100
+    assert 80 <= ev.details["effective_trials"] <= 100  # type: ignore[operator]  # ~independent
+    base = rng.normal(0, 0.01, (1260, 1))
+    clones = TrialSet.from_returns(base + rng.normal(0, 0.0005, (1260, 100)))
+    assert haircut_evidence(clones, "s").details["effective_trials"] <= 2  # type: ignore[operator]
+    probe = TrialSet(noise.returns, noise.labels, noise.selected, source="probe")
+    assert haircut_evidence(probe, "s").details["status"] == "inconclusive"
+    assert haircut_evidence(probe, "s", extra_trials=9).details["n_trials"] == 10

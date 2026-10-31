@@ -23,7 +23,7 @@ from typing import Literal
 
 import numpy as np
 
-from strategy_court.audit._common import inconclusive, make_evidence
+from strategy_court.audit._common import clean, inconclusive, make_evidence
 from strategy_court.audit._stats import as_1d, norm_cdf, norm_ppf, sharpe_per_period
 from strategy_court.audit.citations import (
     BENJAMINI_YEKUTIELI_2001,
@@ -32,6 +32,7 @@ from strategy_court.audit.citations import (
     HOLM_1979,
     LO_2002,
 )
+from strategy_court.audit.dsr import disclosed_trials, effective_trials_for_max
 from strategy_court.audit.trials import TrialSet
 from strategy_court.schemas import Evidence, Severity
 
@@ -174,11 +175,37 @@ def haircut_sharpe(
 
 
 def haircut_evidence(trials: TrialSet, strategy_id: str, extra_trials: int = 0) -> Evidence:
+    """Decision on the *effective* number of independent trials (correlated variants of one rule
+    are not independent tests); the raw-count adjustments on actual p-values are reported too.
+    The court's own probe neighbourhood is not the claimant's search and is never counted."""
     if trials.n_bars < 20:
         return inconclusive(TOOL, strategy_id, "fewer than 20 return observations", CITATIONS)
-    res = haircut_sharpe(
-        trials.selected_returns,
+    if disclosed_trials(trials, extra_trials) < 2:
+        return inconclusive(
+            TOOL,
+            strategy_id,
+            "search not disclosed (single trial); no haircut applicable",
+            CITATIONS,
+        )
+    selected = trials.selected_returns
+    if trials.source == "probe":
+        return haircut_sharpe(selected, n_trials=1 + extra_trials).to_evidence(strategy_id)
+    m_eff = math.ceil(min(trials.n_trials, effective_trials_for_max(trials.returns))) + extra_trials
+    decision = haircut_sharpe(selected, n_trials=max(m_eff, 1))
+    raw = haircut_sharpe(
+        selected,
         n_trials=trials.n_trials + extra_trials,
         other_trial_returns=np.delete(trials.returns, trials.selected, axis=1),
     )
-    return res.to_evidence(strategy_id)
+    ev = decision.to_evidence(strategy_id)
+    details = clean(
+        {
+            **ev.details,
+            "effective_trials": m_eff,
+            "raw_trials": raw.n_trials,
+            **{f"raw_adjusted_p_{k}": v for k, v in raw.adjusted_p.items()},
+            **{f"raw_haircut_sharpe_{k}": v for k, v in raw.haircut_sharpe.items()},
+        }
+    )
+    assert isinstance(details, dict)
+    return ev.model_copy(update={"details": details})

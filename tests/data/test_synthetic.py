@@ -8,6 +8,7 @@ from strategy_court.data import (
     garch_t_returns,
     random_walk_prices,
     survivorship_universe,
+    trending_signal_prices,
     weak_signal_prices,
 )
 
@@ -37,6 +38,17 @@ def test_weak_signal_has_known_autocorrelation() -> None:
     r = log_returns(weak_signal_prices(n_days=20_000, n_assets=4, ar1=phi, seed=2)).to_numpy()
     observed = np.mean([acf1(col) for col in r.T])
     assert 0.5 * phi < observed < 1.5 * phi
+
+
+def test_trending_signal_has_persistent_autocorrelation() -> None:
+    r2, phi = 0.04, 0.95
+    r = log_returns(
+        trending_signal_prices(n_days=40_000, n_assets=4, persistence=phi, r2=r2, seed=5)
+    )
+    x = r.to_numpy()
+    for k in (1, 5, 10):
+        observed = np.mean([float(np.corrcoef(c[:-k], c[k:])[0, 1]) for c in x.T])
+        assert observed == pytest.approx(r2 * phi**k, abs=0.012)
 
 
 def test_generators_are_seed_deterministic() -> None:

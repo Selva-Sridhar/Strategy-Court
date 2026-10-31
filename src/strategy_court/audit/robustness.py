@@ -73,6 +73,7 @@ class CostSensitivityResult:
     delay_sharpe: tuple[float, ...]
     half_life_bars: float
     realistic_bps: float
+    years: float = float("nan")
 
     def to_evidence(self, strategy_id: str) -> Evidence:
         be = self.break_even_bps
@@ -81,7 +82,13 @@ class CostSensitivityResult:
             and self.delay_sharpe[0] > 0
             and self.delay_sharpe[1] < 0.5 * self.delay_sharpe[0]
         )
-        if be < self.realistic_bps:
+        # Costs can only be *the* flaw if there is a gross edge at least one standard error above
+        # zero (t = SR_annual * sqrt(years) >= 1); otherwise it is a skill question.
+        gross_t = self.sharpe[0] * math.sqrt(self.years) if self.sharpe else float("nan")
+        gross_edge = math.isfinite(gross_t) and gross_t >= 1.0
+        if not gross_edge:
+            sev = Severity.INFO
+        elif be < self.realistic_bps:
             sev = Severity.HIGH
         elif be < 2 * self.realistic_bps or decays:
             sev = Severity.MEDIUM
@@ -89,6 +96,14 @@ class CostSensitivityResult:
             sev = Severity.INFO
         be_txt = "never (within the sweep)" if math.isinf(be) else f"{be:.1f} bps"
         delayed = self.delay_sharpe[1] if len(self.delay_sharpe) > 1 else float("nan")
+        summary = (
+            f"Edge disappears at one-way costs of {be_txt} (realistic: "
+            f"{self.realistic_bps:.0f} bps; turnover {self.annual_turnover:.0f}x/yr); "
+            f"Sharpe with one extra bar of delay: {delayed:.2f}."
+            if gross_edge
+            else f"Gross (pre-cost) Sharpe {self.sharpe[0]:.2f} is within one standard error of "
+            "zero, so costs are not the issue (see significance)."
+        )
         return make_evidence(
             COST_TOOL,
             strategy_id,
@@ -96,11 +111,7 @@ class CostSensitivityResult:
             severity=sev,
             statistic_name="break_even_bps",
             statistic=be if math.isfinite(be) else None,
-            summary=(
-                f"Edge disappears at one-way costs of {be_txt} (realistic: "
-                f"{self.realistic_bps:.0f} bps; turnover {self.annual_turnover:.0f}x/yr); "
-                f"Sharpe with one extra bar of delay: {delayed:.2f}."
-            ),
+            summary=summary,
             details={
                 "break_even_bps": be,
                 "break_even_bps_analytic": self.break_even_bps_analytic,
@@ -175,6 +186,7 @@ def cost_sensitivity(
         delay_sharpe=delay_sr,
         half_life_bars=_half_life(delays, delay_sr),
         realistic_bps=realistic_bps,
+        years=(w.shape[0] - 1) / cfg.periods_per_year,
     )
 
 
@@ -230,17 +242,29 @@ class ParameterSensitivityResult:
     frac_ge_half: float
     frac_positive: float
     n_failed: int
+    years: float = float("nan")
+
+    @property
+    def base_has_edge(self) -> bool:
+        """An isolated peak only matters if the peak itself is >= 1 SE above zero."""
+        return math.isfinite(self.years) and self.base_sharpe * math.sqrt(self.years) >= 1.0
 
     def to_evidence(self, strategy_id: str) -> Evidence:
-        if self.base_sharpe <= 0:
-            sev = Severity.MEDIUM
+        if not self.base_has_edge:  # no edge at the chosen point: nothing to be overfit
+            sev = Severity.INFO
         elif self.frac_ge_half < 0.5:
             sev = Severity.HIGH
         elif self.frac_ge_half < 0.75:
             sev = Severity.MEDIUM
         else:
             sev = Severity.INFO
-        shape = "plateau" if sev is Severity.INFO else "isolated peak"
+        shape = (
+            "no edge to test"
+            if not self.base_has_edge
+            else "plateau"
+            if sev is Severity.INFO
+            else "isolated peak"
+        )
         return make_evidence(
             PARAM_TOOL,
             strategy_id,
@@ -294,6 +318,7 @@ def parameter_sensitivity(
         frac_ge_half=float((others >= 0.5 * base).mean()) if others.size and base > 0 else 0.0,
         frac_positive=float((others > 0).mean()) if others.size else float("nan"),
         n_failed=len(trials.failed),
+        years=trials.n_bars / cfg.periods_per_year,
     )
 
 

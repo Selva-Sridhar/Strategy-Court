@@ -9,11 +9,17 @@ with gamma the Euler-Mascheroni constant and V[SR_n] the cross-sectional varianc
 trials' Sharpe ratios. DSR = PSR(SR0): the probability the selected strategy's true Sharpe
 beats what pure luck would deliver after N tries.
 
-Correlated trials overstate N. We report DSR at the raw N and at an *effective* N from the
-eigenvalue participation ratio of the trial-return correlation matrix,
-N_eff = (sum lambda)^2 / sum lambda^2 — a transparent stand-in for the clustering approach of
-López de Prado (2019); the verdict uses the more conservative (smaller) of the two DSRs only if
-N_eff is not trusted, see `conservative`.
+Correlated trials overstate N. We report DSR at the raw N and at an *effective* N: the number of
+independent trials with the same expected maximum as the actual correlated trials (simulated
+under their correlation matrix, `effective_trials_for_max`) — a transparent stand-in for the
+clustering approach of López de Prado (2019). The decision uses the effective N when the full
+search is disclosed. (The eigenvalue participation ratio is kept as a diagnostic; it is not used
+for decisions because it counts sign-flipped variants as one trial.)
+
+Which trials count: only the search that produced the claim. The court's own parameter
+neighbourhood (`TrialSet.source == "probe"`) is not the claimant's search; with a probe set the
+trial count is 1 + `extra_trials` (disclosed count) and the probe set only supplies V[SR]. With
+no disclosed count the deflation is not applicable (inconclusive), never silently skipped.
 """
 
 import math
@@ -49,6 +55,32 @@ def deflated_sharpe_ratio(
     return probabilistic_sharpe_ratio(sr, n_obs, skew, kurt, sr0), sr0
 
 
+def effective_trials_for_max(returns: np.ndarray, n_sims: int = 4000, seed: int = 0) -> float:
+    """Number N of *independent* trials whose expected maximum equals the expected maximum of
+    the actual, correlated trials under the null.
+
+    Draw Gaussian vectors with the trials' correlation matrix, average their maximum, and invert
+    the iid expected-maximum formula. Unlike the participation ratio this counts a sign-flipped
+    variant (trend vs contrarian, correlation -1) as a genuine extra trial, which it is for a
+    best-of-N selection."""
+    x = np.asarray(returns, dtype=np.float64)
+    x = x[:, x.std(axis=0) > 0]
+    m = x.shape[1]
+    if m <= 1:
+        return float(m)
+    eig, vec = np.linalg.eigh(np.corrcoef(x, rowvar=False))
+    loadings = vec * np.sqrt(np.clip(eig, 0.0, None))
+    z = np.random.default_rng(seed).standard_normal((n_sims, m)) @ loadings.T
+    target = float(z.max(axis=1).mean())
+    if target <= 0:
+        return 1.0
+    lo, hi = 1.0, 10.0 * m
+    for _ in range(60):
+        mid = math.sqrt(lo * hi)
+        lo, hi = (mid, hi) if expected_max_sharpe(mid, 1.0) < target else (lo, mid)
+    return math.sqrt(lo * hi)
+
+
 def effective_trials(returns: np.ndarray) -> float:
     """Participation ratio of the correlation spectrum: 1 for identical trials, N for
     uncorrelated ones. Constant columns are dropped."""
@@ -75,15 +107,21 @@ class DSRResult:
     dsr_effective: float
     alpha: float
     periods_per_year: int
+    use_effective: bool = True
+
+    @property
+    def decision_dsr(self) -> float:
+        return self.dsr_effective if self.use_effective else self.dsr
 
     def to_evidence(self, strategy_id: str) -> Evidence:
         ann = math.sqrt(self.periods_per_year)
-        passed = math.isfinite(self.dsr) and self.dsr >= 1 - self.alpha
+        d = self.decision_dsr
+        passed = math.isfinite(d) and d >= 1 - self.alpha
         sev = (
             Severity.INFO
             if passed
             else Severity.HIGH
-            if not math.isfinite(self.dsr) or self.dsr < 0.5
+            if not math.isfinite(d) or d < 0.5
             else Severity.MEDIUM
         )
         return make_evidence(
@@ -91,9 +129,9 @@ class DSRResult:
             strategy_id,
             flag=not passed,
             severity=sev,
-            statistic_name="dsr",
-            statistic=self.dsr,
-            p_value=1 - self.dsr if math.isfinite(self.dsr) else None,
+            statistic_name="dsr_effective" if self.use_effective else "dsr",
+            statistic=d,
+            p_value=1 - d if math.isfinite(d) else None,
             summary=(
                 f"After {self.n_trials} trials luck alone is expected to produce an annual Sharpe "
                 f"of {self.sr0 * ann:.2f}; observed {self.sr * ann:.2f}; deflated Sharpe "
@@ -110,6 +148,7 @@ class DSRResult:
                 "expected_max_sharpe_annual_effective": self.sr0_effective * ann,
                 "dsr": self.dsr,
                 "dsr_effective": self.dsr_effective,
+                "decision_uses_effective_trials": self.use_effective,
                 "skewness": self.skew,
                 "kurtosis": self.kurt,
                 "alpha": self.alpha,
@@ -130,9 +169,13 @@ def dsr_test(
     sr, skew, kurt, n = sharpe_moments(r)
     sharpes = trials.sharpes()
     sharpes = sharpes[np.isfinite(sharpes)]
-    n_trials = trials.n_trials + extra_trials
     var = float(np.var(sharpes, ddof=1)) if sharpes.size >= 2 else 0.0
-    n_eff = min(float(n_trials), effective_trials(trials.returns) + extra_trials)
+    if trials.source == "probe":
+        n_trials = 1 + extra_trials
+        n_eff = float(n_trials)
+    else:
+        n_trials = trials.n_trials + extra_trials
+        n_eff = min(float(n_trials), effective_trials_for_max(trials.returns) + extra_trials)
     dsr, sr0 = deflated_sharpe_ratio(sr, n, skew, kurt, n_trials, var)
     dsr_e, sr0_e = deflated_sharpe_ratio(sr, n, skew, kurt, n_eff, var)
     return DSRResult(
@@ -140,9 +183,19 @@ def dsr_test(
     )
 
 
+def disclosed_trials(trials: TrialSet, extra_trials: int) -> int:
+    """Number of trials attributable to the claimant's own search."""
+    return (1 if trials.source == "probe" else trials.n_trials) + extra_trials
+
+
 def dsr_evidence(trials: TrialSet, strategy_id: str, extra_trials: int = 0) -> Evidence:
-    if trials.n_trials + extra_trials < 2:
-        return inconclusive(TOOL, strategy_id, "only one trial disclosed", CITATIONS)
+    if disclosed_trials(trials, extra_trials) < 2:
+        return inconclusive(
+            TOOL,
+            strategy_id,
+            "search not disclosed (single trial); deflation not applicable",
+            CITATIONS,
+        )
     if trials.n_bars < 10:
         return inconclusive(TOOL, strategy_id, "fewer than 10 return observations", CITATIONS)
     return dsr_test(trials, extra_trials).to_evidence(strategy_id)

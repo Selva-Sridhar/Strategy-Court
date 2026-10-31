@@ -14,6 +14,12 @@ Plan and design: `PROJECT_PLAN.md`. Status: `TRACKER.md` (update it when startin
 - Typecheck: `uv run mypy` (strict)
 - Tests (fast): `uv run pytest -m "not slow and not live_llm and not network"`
 - Tests (all): `uv run pytest`
+- Benchmark (dev, for calibration): `uv run python -m strategy_court.benchmark.suite --split dev --out benchmark_results`
+- Benchmark (held-out, headline; run only with a frozen rubric): `uv run python -m strategy_court.benchmark.suite --split heldout --out docs/benchmark`
+
+## Rubric protocol — IMPORTANT
+- `src/strategy_court/rubric.yaml` is versioned; its fingerprint is stored in every verdict.
+- Calibrate only on **dev** seeds (0-4). Run **held-out** seeds (100-109) once per frozen rubric version and commit those results under `docs/benchmark/`. Never tune on held-out.
 
 ## Test markers
 - `docker` — needs a Docker daemon; auto-skipped when absent (authoring machine has no Docker; run on PoC machine / CI).

@@ -23,7 +23,7 @@ from strategy_court.audit._common import inconclusive, make_evidence, severity_f
 from strategy_court.audit.bootstrap import optimal_block_length, stationary_bootstrap_indices
 from strategy_court.audit.citations import HANSEN_2005, STW_1999, WHITE_2000
 from strategy_court.audit.trials import TrialSet
-from strategy_court.schemas import Evidence
+from strategy_court.schemas import Evidence, Severity
 
 TOOL = "data_snooping"
 CITATIONS = (WHITE_2000, HANSEN_2005, STW_1999)
@@ -127,9 +127,26 @@ def reality_check(
 def snooping_evidence(
     trials: TrialSet, strategy_id: str, benchmark_returns: np.ndarray | None = None, **kw: object
 ) -> Evidence:
+    """Applies only to the claimant's disclosed search: the court's own probe neighbourhood is not
+    data snooping by the claimant. Without an edge in the selected trial the question is moot."""
+    if trials.source == "probe":
+        return inconclusive(
+            TOOL, strategy_id, "search not disclosed; snooping test not applicable", CITATIONS
+        )
     if trials.returns.shape[1] < 2:
         return inconclusive(TOOL, strategy_id, "needs at least two trials", CITATIONS)
     if trials.n_bars < 50:
         return inconclusive(TOOL, strategy_id, "fewer than 50 observations", CITATIONS)
     res = reality_check(trials.returns, benchmark_returns, **kw)  # type: ignore[arg-type]
-    return res.to_evidence(strategy_id, trials.labels)
+    ev = res.to_evidence(strategy_id, trials.labels)
+    bench = 0.0 if benchmark_returns is None else float(np.mean(benchmark_returns))
+    if float(trials.selected_returns.mean()) - bench <= 0:
+        ev = ev.model_copy(
+            update={
+                "flag": False,
+                "severity": Severity.INFO,
+                "summary": "Selected trial does not beat the benchmark, so snooping is moot "
+                "(see significance). " + ev.summary,
+            }
+        )
+    return ev

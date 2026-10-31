@@ -168,21 +168,26 @@ Orchestrator: explicit **state machine**, not a free agent loop. Every transitio
 ---
 
 ## 8. Rubric
-- File: `rubric.yaml` (versioned; version recorded in each verdict).
-- Evidence → weighted penalties → credibility score 0–100 → label: **Acquitted / Not proven / Convicted** (with counts).
-- **Failed causality test ⇒ automatic conviction.**
-- Rubric must not depend on Defense agreeableness.
-- Thresholds tuned on dev seeds only (D7).
+- File: `src/strategy_court/rubric.yaml` (versioned; `version+fingerprint` recorded in each verdict). Current: **1.1.0**.
+- Evidence → weighted penalties → credibility score 0–100 → label: **Acquitted (≥70) / Not proven / Convicted (<40)**.
+- Tools are grouped into families (lookahead, selection, significance, implementability, stability, claim). Within a family: `min(cap, largest + 0.5 × others)`, so correlated tools don't stack.
+- **Failed causality test ⇒ automatic conviction** (score capped at 5).
+- **Acquittal requires** conclusive look-ahead and significance evidence. **Conviction requires** positive evidence of a flaw (look-ahead, selection, implementability or claim). Failing only to show skill gives "Not proven".
+- Tools only flag consequences of an edge when one exists. For example, costs or parameter peaks count only if the gross edge is ≥ 1 SE. Selection-bias tools count only the claimant's *disclosed* search, never the court's own probe neighbourhood.
+- Property-tested: deterministic, order-invariant, monotone in severity, penalties sum to 100 − score, no conviction without a flaw.
+- Rubric must not depend on Defense agreeableness. Thresholds tuned on dev seeds only (D7); held-out run once per frozen version.
 
 ---
 
 ## 9. Benchmark & experiments
 
 ### 9.1 Planted-flaw benchmark
-- Generators: GARCH-t random walk (true alpha = 0), weak injected signal with known IC, survivorship universe (simulated delistings).
-- Flaws injected on clean base strategies: look-ahead, scaler leakage, best-of-N search, zero costs, survivorship.
-- Metrics: recall per flaw, false-positive rate on clean + weak-signal strategies, verdict accuracy, confusion matrix, Wilson CIs, Benjamini–Hochberg where multiple tests are aggregated.
-- Fixed seeds; `make benchmark` reproduces the table exactly. Dev/held-out seed split.
+- Generators: GARCH-t random walk (true alpha = 0), a persistent trending signal (genuine edge), AR(1) short-term signal (zero-cost case), and a survivorship universe (simulated delistings, −30% delisting return).
+- 11 case kinds per seed: genuine ×2, no-edge ×3, and flaws (look-ahead, scaler leak, best-of-N disclosed / hidden, zero cost, survivorship). Strategies are source templates, so the static scanner sees what the court sees.
+- Ground truth is fixed before the court runs. Genuine cases are confirmed by an independent 20-year out-of-sample simulation net of 10 bps costs.
+- Targets: flaws → convicted; no-edge → not acquitted; genuine → not convicted.
+- Metrics: verdict accuracy, flaw conviction / rejection rate, false-conviction rate (genuine), false-acquittal rate (no-edge), per-flaw rates, attribution (did the expected tool flag?), confusion matrix, Wilson 95% CIs.
+- Seeds: dev 0–4 (calibration), held-out 100–109 (reported). Results in `docs/benchmark/`.
 
 ### 9.2 Adversarial overfitting stress test
 Muse Code is given zero-alpha random-walk data and told to maximise in-sample Sharpe. Every output is a known false positive → report court's conviction rate (Perez et al., 2022, adapted).

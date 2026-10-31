@@ -9,6 +9,12 @@
 
 Also reported: the performance-degradation regression of OOS on IS Sharpe of the selected
 trial, and the probability that the selected trial loses money OOS.
+
+Severity reads PBO together with that loss probability, as the paper does: among near-identical
+configurations (a parameter plateau) the IS winner's OOS *rank* is arbitrary, so PBO is high even
+though the selection does no harm. Overfitting is flagged when it is costly:
+HIGH if PBO > 0.5 and P(OOS loss) >= 0.5; MEDIUM if PBO > 0.5 and P(OOS loss) >= 0.2, or
+PBO > 0.2 and P(OOS loss) >= 0.5; otherwise INFO.
 Sharpe ratios for all combinations come from per-group sufficient statistics (sums and sums of
 squares), so the C(16, 8) = 12,870 combinations cost one matrix product.
 """
@@ -21,6 +27,7 @@ import numpy as np
 from scipy import stats
 
 from strategy_court.audit._common import inconclusive, make_evidence
+from strategy_court.audit._stats import sharpe_per_period
 from strategy_court.audit.citations import BBLZ_2014, BBLZ_2017
 from strategy_court.audit.trials import TrialSet
 from strategy_court.schemas import Evidence, Severity
@@ -55,20 +62,23 @@ class PBOResult:
     n_trials: int
     periods_per_year: int
 
+    @property
+    def severity(self) -> Severity:
+        loss = self.prob_oos_loss
+        if self.pbo > 0.5 and loss >= 0.5:
+            return Severity.HIGH
+        if (self.pbo > 0.5 and loss >= 0.2) or (self.pbo > 0.2 and loss >= 0.5):
+            return Severity.MEDIUM
+        return Severity.INFO
+
     def to_evidence(self, strategy_id: str) -> Evidence:
-        sev = (
-            Severity.HIGH
-            if self.pbo > 0.5
-            else Severity.MEDIUM
-            if self.pbo > 0.2
-            else Severity.INFO
-        )
+        sev = self.severity
         ann = math.sqrt(self.periods_per_year)
         hist, edges = np.histogram(self.logits[np.isfinite(self.logits)], bins=30)
         return make_evidence(
             TOOL,
             strategy_id,
-            flag=self.pbo > 0.2,
+            flag=sev >= Severity.MEDIUM,
             severity=sev,
             statistic_name="pbo",
             statistic=self.pbo,
@@ -144,4 +154,14 @@ def pbo_evidence(trials: TrialSet, strategy_id: str, n_groups: int = 16) -> Evid
         return inconclusive(
             TOOL, strategy_id, f"fewer than {10 * n_groups} observations", CITATIONS
         )
-    return pbo_cscv(trials.returns, n_groups).to_evidence(strategy_id)
+    ev = pbo_cscv(trials.returns, n_groups).to_evidence(strategy_id)
+    if sharpe_per_period(trials.selected_returns) <= 0:  # no in-sample edge: nothing was overfit
+        ev = ev.model_copy(
+            update={
+                "flag": False,
+                "severity": Severity.INFO,
+                "summary": "Selected configuration has no in-sample edge, so overfitting is moot "
+                "(see significance). " + ev.summary,
+            }
+        )
+    return ev

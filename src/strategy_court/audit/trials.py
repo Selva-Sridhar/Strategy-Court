@@ -7,6 +7,7 @@ per-bar net returns, shape (n_bars, n_trials), plus the index of the selected tr
 
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -20,13 +21,22 @@ Params = Mapping[str, ParamValue]
 StrategyFactory = Callable[[Params], Strategy]
 
 
+TrialSource = Literal["disclosed", "probe"]
+
+
 @dataclass(frozen=True)
 class TrialSet:
+    """`source` matters for multiple-testing corrections: a *disclosed* set is the search that
+    produced the claim (deflate by it); a *probe* set is the court's own parameter neighbourhood,
+    used for robustness (PBO, purged CV) but never to penalise the claimant for trials it did not
+    run."""
+
     returns: np.ndarray  # (n_bars, n_trials) per-bar net simple returns
     labels: tuple[str, ...]
     selected: int
     params: tuple[Params, ...] = field(default_factory=tuple)
     failed: tuple[str, ...] = ()  # configurations that could not be evaluated (counted as trials)
+    source: TrialSource = "disclosed"
 
     def __post_init__(self) -> None:
         if self.returns.ndim != 2 or self.returns.shape[1] != len(self.labels):
@@ -76,6 +86,7 @@ def build_trial_set(
     market: MarketData,
     config: BacktestConfig | None = None,
     selected: int | None = None,
+    source: TrialSource = "disclosed",
 ) -> TrialSet:
     """Evaluate every configuration with one batched engine call (trusted, in-process code).
 
@@ -98,4 +109,4 @@ def build_trial_set(
     if selected is None:
         sr = np.array([sharpe_per_period(returns[:, j]) for j in range(returns.shape[1])])
         selected = int(np.nanargmax(np.where(np.isfinite(sr), sr, -np.inf)))
-    return TrialSet(returns, tuple(labels), selected, tuple(ok_params), tuple(failed))
+    return TrialSet(returns, tuple(labels), selected, tuple(ok_params), tuple(failed), source)

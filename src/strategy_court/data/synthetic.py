@@ -96,6 +96,35 @@ def weak_signal_prices(
     return _to_prices(garch_t_returns(n_days, n_assets, rng, params, ar1=ar1))
 
 
+def trending_signal_prices(
+    n_days: int = 2520,
+    n_assets: int = 5,
+    persistence: float = 0.98,
+    r2: float = 0.01,
+    seed: int = 0,
+    params: GarchParams = DEFAULT_GARCH,
+) -> pd.DataFrame:
+    """Prices with a slow, persistent, genuinely exploitable expected return.
+
+    r_t = mu_{t-1} + e_t with e_t the GARCH-t shocks and mu_t = phi mu_{t-1} + sqrt(1-phi^2) s z_t,
+    s chosen so mu explains a share `r2` of return variance. Lag-k return autocorrelation is
+    r2 * phi^k, so a trend rule survives t+1 fills (half-life ln 0.5 / ln phi bars)."""
+    if not 0 <= persistence < 1:
+        raise ValueError("persistence must be in [0, 1)")
+    if not 0 <= r2 < 1:
+        raise ValueError("r2 must be in [0, 1)")
+    rng = np.random.default_rng(seed)
+    eps = garch_t_returns(n_days, n_assets, rng, params)
+    s = params.annual_vol / np.sqrt(TRADING_DAYS) * np.sqrt(r2 / (1 - r2))
+    z = rng.standard_normal((n_days, n_assets)) * s * np.sqrt(1 - persistence**2)
+    mu = np.empty_like(z)
+    mu[0] = rng.standard_normal(n_assets) * s
+    for t in range(1, n_days):
+        mu[t] = persistence * mu[t - 1] + z[t]
+    drift = np.vstack([np.zeros((1, n_assets)), mu[:-1]])
+    return _to_prices(eps + drift)
+
+
 @dataclass(frozen=True)
 class SurvivorshipUniverse:
     """Full universe incl. names that were delisted (NaN after their delisting date)."""

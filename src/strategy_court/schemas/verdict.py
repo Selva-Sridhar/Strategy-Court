@@ -27,6 +27,12 @@ class Verdict(FrozenModel):
     rubric_version: str = Field(min_length=1)
     evidence_ids: list[str] = Field(min_length=1)
     penalties: list[Penalty] = Field(default_factory=list)
+    family_penalties: dict[str, float] = Field(
+        default_factory=dict, description="Points deducted per evidence family after caps."
+    )
+    notes: list[str] = Field(
+        default_factory=list, description="Deterministic reasons, e.g. why acquittal was withheld."
+    )
     auto_conviction_reason: str | None = None
     opinion: str | None = None
     opinion_validated: bool = False

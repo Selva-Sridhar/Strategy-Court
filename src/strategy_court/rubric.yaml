@@ -1,0 +1,61 @@
+# Strategy Court scoring rubric. Evidence -> credibility score (0-100) -> verdict label.
+# Any change to this file changes the rubric fingerprint recorded in every verdict; bump
+# `version` deliberately. Calibrate only on dev seeds (benchmark split "dev"), never held-out.
+
+version: "1.1.0"
+# 1.1.0 (dev calibration): conviction requires positive evidence of a flaw; failing to show skill
+#        alone yields "not proven" (see conviction_requires_any).
+
+# Fraction of a tool's weight deducted when its evidence is flagged at this severity.
+severity_factor:
+  INFO: 0.0
+  LOW: 0.25
+  MEDIUM: 0.5
+  HIGH: 1.0
+  CRITICAL: 1.0
+
+# Within a family, penalty = min(cap, largest + secondary_weight * sum(others)): correlated tools
+# (e.g. DSR, PBO and Haircut SR all measure selection bias) do not stack linearly.
+secondary_weight: 0.5
+
+# Fraction of a tool's weight deducted when its evidence is inconclusive (missing inputs, errors).
+inconclusive_penalty: 0.0
+
+labels:
+  acquit_at_or_above: 70
+  convict_below: 40
+
+# Hard rules: proven look-ahead is conviction regardless of anything else.
+auto_convict:
+  - tool: causality
+    min_severity: CRITICAL
+    cap_score: 5
+    reason: "look-ahead proven by the causality test"
+
+# Acquittal is withheld (-> not proven) unless each family below has conclusive evidence:
+# absence of evidence is not evidence of a sound strategy.
+acquittal_requires: [lookahead, significance]
+
+# Conviction is withheld (-> not proven) unless at least one of these families deducted points:
+# "no demonstrated skill" (significance, stability) is not proof of a flawed claim.
+conviction_requires_any: [lookahead, selection, implementability, claim]
+
+families:
+  lookahead:
+    cap: 100
+    tools: {causality: 100, ast_scanner: 15}
+  selection:
+    cap: 45
+    tools: {deflated_sharpe: 35, pbo: 30, haircut_sharpe: 25, purged_cv: 25, data_snooping: 25}
+  significance:
+    cap: 40
+    tools: {psr: 25, placebo_null: 30, bootstrap_sharpe: 20}
+  implementability:
+    cap: 35
+    tools: {cost_sensitivity: 30, parameter_sensitivity: 15}
+  stability:
+    cap: 20
+    tools: {subperiod_stability: 20}
+  claim:
+    cap: 30
+    tools: {claim_consistency: 30}

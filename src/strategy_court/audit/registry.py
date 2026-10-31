@@ -90,7 +90,9 @@ class TrialContext:
         if self.trials is None:
             assert self.factory is not None and self.params is not None and self.market is not None
             grid = neighbourhood_grid(self.params)
-            self.trials = build_trial_set(self.factory, grid, self.market, self.config, selected=0)
+            self.trials = build_trial_set(
+                self.factory, grid, self.market, self.config, selected=0, source="probe"
+            )
         return self.trials
 
     def opts(self, tool: str) -> dict[str, object]:

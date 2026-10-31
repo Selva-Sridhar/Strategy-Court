@@ -1,0 +1,66 @@
+[project]
+name = "strategy-court"
+version = "0.1.0"
+description = "Puts trading strategies on trial: deterministic statistical audits, LLM agents only propose and explain."
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "numpy>=2.0",
+    "pandas>=2.2",
+    "scipy>=1.13",
+    "pydantic>=2.7",
+    "pyarrow>=16.0",
+    "pyyaml>=6.0",
+    "yfinance>=0.2.40",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.2",
+    "hypothesis>=6.100",
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "pandas-stubs>=2.2",
+    "types-pyyaml>=6.0",
+    "scipy-stubs>=1.14",
+    "pre-commit>=3.7",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/strategy_court"]
+
+[tool.uv]
+# Supply-chain guard: never resolve packages published in the last 7 days.
+exclude-newer = "2026-10-21T00:00:00Z"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --import-mode=importlib"
+markers = [
+    "docker: requires a running Docker daemon (skipped otherwise)",
+    "live_llm: calls the real Meta Model API (skipped unless enabled)",
+    "slow: long-running statistical calibration tests",
+    "network: hits real external services such as yfinance (skipped unless enabled)",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "N", "SIM", "RUF", "NPY", "PD"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+mypy_path = "src"
+packages = ["strategy_court"]
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["yfinance.*"]
+ignore_missing_imports = true

@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+htmlcov/
+
+# Secrets — never commit
+.env
+*.env
+!.env.example
+
+# Data caches (regenerated via loaders; hashes are tracked in data manifests)
+data_cache/
+*.parquet
+
+# Run artefacts
+runs/
+benchmark/results/tmp/
+
+# Node / web
+node_modules/
+web/dist/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Office temp files
+~$*

@@ -7,6 +7,8 @@ fingerprint is recorded in every verdict. Properties guaranteed (and property-te
 * monotone: raising any evidence's severity never raises the score;
 * accounting identity: sum of penalty points == 100 - score;
 * no conviction without positive evidence of a flaw (or a hard auto-conviction rule);
+* no acquittal with flagged evidence in an `acquittal_blocked_by` family;
+* corroborated selection-bias evidence alone is enough to convict;
 * independent of any LLM output — only `Evidence` objects are read.
 """
 
@@ -61,6 +63,7 @@ class Rubric(FrozenModel):
     labels: Labels
     auto_convict: list[AutoConvict] = Field(default_factory=list)
     acquittal_requires: list[str] = Field(default_factory=list)
+    acquittal_blocked_by: list[str] = Field(default_factory=list)
     conviction_requires_any: list[str] = Field(default_factory=list)
     families: dict[str, FamilySpec]
 
@@ -79,9 +82,12 @@ class Rubric(FrozenModel):
                 if tool in seen:
                     raise ValueError(f"tool '{tool}' is in families '{seen[tool]}' and '{fam}'")
                 seen[tool] = fam
-        unknown = (set(self.acquittal_requires) | set(self.conviction_requires_any)) - set(
-            self.families
+        named = (
+            set(self.acquittal_requires)
+            | set(self.acquittal_blocked_by)
+            | set(self.conviction_requires_any)
         )
+        unknown = named - set(self.families)
         if unknown:
             raise ValueError(f"label rules name unknown families: {sorted(unknown)}")
         return self
@@ -191,6 +197,10 @@ def score(evidence: Sequence[Evidence], rubric: Rubric | None = None) -> Verdict
             if not any(_conclusive(ev) for ev, _ in raw[fam]):
                 label = VerdictLabel.NOT_PROVEN
                 notes.append(f"acquittal withheld: no conclusive '{fam}' evidence")
+        for fam in rb.acquittal_blocked_by:
+            if any(ev.flag and _conclusive(ev) for ev, _ in raw[fam]):
+                label = VerdictLabel.NOT_PROVEN
+                notes.append(f"acquittal withheld: flagged '{fam}' evidence")
     else:
         label = VerdictLabel.NOT_PROVEN
     return Verdict(

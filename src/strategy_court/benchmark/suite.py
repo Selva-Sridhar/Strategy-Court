@@ -29,7 +29,10 @@ from strategy_court.rubric import Rubric, load_rubric, score
 from strategy_court.schemas import Evidence
 
 DEV_SEEDS: tuple[int, ...] = tuple(range(5))
-HELDOUT_SEEDS: tuple[int, ...] = tuple(range(100, 110))
+# Held-out seeds are spent once a rubric version has been evaluated on them; a new version gets
+# a fresh set. 100-109: rubric 1.1.0 (results in docs/benchmark/v1.1). 200-209: rubric 1.2.0.
+USED_HELDOUT_SEEDS: dict[str, tuple[int, ...]] = {"1.1.0": tuple(range(100, 110))}
+HELDOUT_SEEDS: tuple[int, ...] = tuple(range(200, 210))
 BUDGET: dict[str, dict[str, object]] = {
     "causality": {"n_checkpoints": 8},
     "placebo_null": {"n_placebos": 199},

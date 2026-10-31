@@ -32,7 +32,7 @@ def clean_set() -> list[Evidence]:
 
 def test_rubric_covers_every_registered_tool_exactly_once() -> None:
     assert set(RB.tool_family) == set(TOOLS)
-    assert RB.version_tag.startswith("1.1.0+") and len(RB.fingerprint) == 8
+    assert RB.version_tag.startswith("1.2.0+") and len(RB.fingerprint) == 8
 
 
 def test_clean_evidence_is_acquitted_with_full_score() -> None:
@@ -52,11 +52,14 @@ def test_family_aggregation_cap_and_diminishing_returns() -> None:
     evidence = [e for e in clean_set() if e.tool not in ("deflated_sharpe", "pbo")]
     evidence += [ev("deflated_sharpe", Severity.HIGH), ev("pbo", Severity.MEDIUM)]
     v = score(evidence)
-    assert v.family_penalties["selection"] == pytest.approx(35 + 0.5 * 15)  # 42.5 < cap 45
-    evidence.append(ev("haircut_sharpe", Severity.HIGH).model_copy(update={"id": "h2"}))
+    assert v.family_penalties["selection"] == pytest.approx(35 + 0.5 * 15)  # below the cap
+    for tool in ("haircut_sharpe", "purged_cv", "data_snooping"):
+        evidence.append(ev(tool, Severity.HIGH).model_copy(update={"id": f"{tool}-2"}))
     v2 = score(evidence)
-    assert v2.family_penalties["selection"] == pytest.approx(45)  # capped
-    assert v2.label is VerdictLabel.NOT_PROVEN
+    cap = RB.families["selection"].cap
+    assert cap < 35 + 0.5 * (15 + 25 + 25 + 25)
+    assert v2.family_penalties["selection"] == pytest.approx(cap)  # capped
+    assert v2.label is VerdictLabel.CONVICTED
 
 
 def test_no_skill_alone_is_not_proven_not_convicted() -> None:
@@ -72,6 +75,22 @@ def test_no_skill_alone_is_not_proven_not_convicted() -> None:
         "cost_sensitivity", Severity.HIGH
     )
     assert score(evidence).label is VerdictLabel.CONVICTED
+
+
+def test_corroborated_selection_bias_alone_can_convict() -> None:
+    selection = set(RB.families["selection"].tools)
+    evidence = [ev(t, Severity.HIGH if t in selection else Severity.INFO) for t in TOOLS]
+    v = score(evidence)
+    assert v.label is VerdictLabel.CONVICTED and v.score < RB.labels.convict_below
+    one = [ev(t, Severity.HIGH if t == "deflated_sharpe" else Severity.INFO) for t in TOOLS]
+    assert score(one).label is not VerdictLabel.CONVICTED  # a single signal is not enough
+
+
+def test_inconsistent_claim_is_never_acquitted() -> None:
+    evidence = [ev(t, Severity.HIGH if t == "claim_consistency" else Severity.INFO) for t in TOOLS]
+    v = score(evidence)
+    assert v.score >= RB.labels.acquit_at_or_above and v.label is VerdictLabel.NOT_PROVEN
+    assert "acquittal withheld: flagged 'claim' evidence" in v.notes
 
 
 def test_acquittal_requires_conclusive_core_families() -> None:
@@ -135,6 +154,14 @@ def test_properties_order_invariance_identity_and_monotonicity(
     assert sum(p.points for p in v.penalties) == pytest.approx(100 - v.score, abs=1e-6)
     if v.label is VerdictLabel.CONVICTED and v.auto_conviction_reason is None:
         assert any(v.family_penalties[f] > 0 for f in RB.conviction_requires_any)
+    if v.label is VerdictLabel.ACQUITTED:
+        blocked = {f for f in RB.acquittal_blocked_by}
+        assert not any(
+            e.flag
+            and e.details.get("status") != "inconclusive"
+            and RB.tool_family[e.tool] in blocked
+            for e in evidence
+        )
     for i, e in enumerate(evidence):
         if e.severity is Severity.CRITICAL or e.details.get("status") == "inconclusive":
             continue

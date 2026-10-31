@@ -56,7 +56,7 @@
 |---|---|---|---|---|---|---|
 | T2.1 | `rubric.yaml` + `rubric.py` (auto-convict on causality fail) | Devin | T1.13 | DONE | Deterministic verdicts | v1.1.0 (`src/strategy_court/rubric.yaml`). Families with caps + diminishing returns; auto-conviction on proven look-ahead; acquittal needs conclusive look-ahead + significance; **conviction needs positive flaw evidence**. Property tests: order invariance, monotonicity, penalty identity, no conviction without a flaw |
 | T2.2 | Flaw injectors: look-ahead, scaler leak, best-of-N, zero cost, survivorship | Devin | T0.5 | DONE | Each injector proven by test | 11 case kinds/seed (genuine x2, no-edge x3, 6 flaws incl. best-of-N disclosed vs hidden). Strategy *source* templates. New `trending_signal_prices` generator. Ground truth fixed ex ante (genuine = independent 20-yr OOS Sharpe >= 0.3 net of 10 bps) |
-| T2.3 | Benchmark harness: recall, FPR, confusion, Wilson CI, dev/held-out seeds | Devin | T2.1, T2.2 | DONE | `make benchmark` reproducible | Wilson CIs, attribution, confusion; dev seeds 0-4 (calibration), held-out 100-109 run once. **Held-out (rubric 1.1.0): accuracy 79%; look-ahead / scaler / zero-cost 100% convicted; best-of-N disclosed 60% convicted, 0% acquitted; survivorship 50% convicted, 0% acquitted; best-of-N hidden 0% convicted (70% acquitted: known limit); genuine false conviction 5%; no-edge false acquittal 10%.** Results: `docs/benchmark/heldout/` |
+| T2.3 | Benchmark harness: recall, FPR, confusion, Wilson CI, dev/held-out seeds | Devin | T2.1, T2.2 | DONE | `make benchmark` reproducible | Wilson CIs, attribution, confusion; dev seeds 0-4 (calibration), held-out 100-109 run once. **Held-out (rubric 1.1.0): accuracy 79%; look-ahead / scaler / zero-cost 100% convicted; best-of-N disclosed 60% convicted, 0% acquitted; survivorship 50% convicted, 0% acquitted; best-of-N hidden 0% convicted (70% acquitted: known limit); genuine false conviction 5%; no-edge false acquittal 10%.** **v1.2.0 on fresh held-out 200-209: accuracy 85%; flaw conviction 77% / rejection 92%; best-of-N disclosed 90% convicted; survivorship 60%; look-ahead / scaler / zero-cost 100%; no-edge false acquittal 0%; genuine false conviction 15% (3/20 — all unlucky 5-yr samples, claimed SR 0.15-0.32 vs true OOS 0.84-1.23, convicted via one MEDIUM flaw signal plus no-skill penalties).** Results: `docs/benchmark/v1.1/`, `docs/benchmark/v1.2/` |
 
 ## Phase 3 — Agents & orchestration
 
@@ -111,6 +111,7 @@
 | 2026-10-28 | D6 | Research-backed methods with citations throughout | User |
 | 2026-10-28 | — | Keep full technical depth; quant-focused framing (intentional) | User |
 | 2026-10-30 | D14 | Dev calibration -> rubric 1.1.0 + tool fixes: PBO read with P(OOS loss); selection-bias tools count only the claimant's *disclosed* search (court probes never penalise); effective trials for max-selection via simulation (counts sign flips); tools don't flag consequences of having no edge (gross t >= 1 gates); short track record = LOW unflagged; conviction requires flaw evidence | Devin |
+| 2026-10-30 | D16 | Rubric 1.2.0: selection cap 45 -> 65 (corroborated selection bias can convict alone) and `acquittal_blocked_by: [claim]` (inconsistent claims never acquitted); both property-tested. Dev unchanged in aggregate; validated once on fresh held-out seeds 200-209 | Devin |
 | 2026-10-30 | D15 | Held-out seeds 100-109 are now *used*. Known rubric issue seen there (not tuned): selection family alone (cap 45) can never reach conviction (<40). Fix candidates for v1.2 must be calibrated on dev and validated on **fresh held-out seeds 200-209** | Devin |
 | 2026-10-30 | D12 | Added tool 13 `data_snooping` (White RC + Hansen SPA); T1.10 registered as two tools -> 14 registered tools | Devin |
 | 2026-10-30 | D13 | Benchmark design note: with t+1 fills a lag-1 signal monetises only ar1^2, and a 1-bar peek earns ~nothing; plant monetisable signals/leaks (e.g. 2-bar peeks) in T2.2 | Devin |
@@ -132,6 +133,7 @@
 | 2026-10-28 | T0.1 done: scaffold, uv env (pinned via uv.lock), ruff/mypy strict/pytest green, CI workflow |
 | 2026-10-28 | T0.2 done: schemas (Hypothesis, StrategySpec, Evidence+Citation, Verdict, TrialTrace), 12 tests green |
 | 2026-10-28 | T0.3 done: LLM layer (Protocol, FakeProvider, replay cache, cost/budget, structured output) |
+| 2026-10-30 | Rubric 1.2.0 + fresh held-out (200-209) results; 206 tests green |
 | 2026-10-30 | T2.1–T2.3 done: rubric 1.1.0, benchmark cases + harness, held-out results committed; 204 tests green. **Phase 2 complete** |
 | 2026-10-30 | T1.2–T1.13 done: all audit tools + registry; 181 tests green (incl. slow calibration). **Phase 1 complete** |
 | 2026-10-30 | First push to GitHub (`4b9913a`, merged remote README); CI green on GitHub Actions. Auth: fine-grained PAT scoped to this repo (Contents + Workflows RW) |

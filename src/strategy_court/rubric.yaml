@@ -2,9 +2,12 @@
 # Any change to this file changes the rubric fingerprint recorded in every verdict; bump
 # `version` deliberately. Calibrate only on dev seeds (benchmark split "dev"), never held-out.
 
-version: "1.1.0"
+version: "1.2.0"
 # 1.1.0 (dev calibration): conviction requires positive evidence of a flaw; failing to show skill
 #        alone yields "not proven" (see conviction_requires_any).
+# 1.2.0 structural fixes (found on held-out 1.1, calibrated on dev, validated on fresh held-out):
+#        selection cap 45 -> 65 so corroborated selection-bias evidence can convict on its own;
+#        acquittal_blocked_by: [claim] so an internally inconsistent claim is never acquitted.
 
 # Fraction of a tool's weight deducted when its evidence is flagged at this severity.
 severity_factor:
@@ -36,6 +39,9 @@ auto_convict:
 # absence of evidence is not evidence of a sound strategy.
 acquittal_requires: [lookahead, significance]
 
+# Acquittal is also withheld if any of these families has flagged evidence.
+acquittal_blocked_by: [claim]
+
 # Conviction is withheld (-> not proven) unless at least one of these families deducted points:
 # "no demonstrated skill" (significance, stability) is not proof of a flawed claim.
 conviction_requires_any: [lookahead, selection, implementability, claim]
@@ -45,7 +51,7 @@ families:
     cap: 100
     tools: {causality: 100, ast_scanner: 15}
   selection:
-    cap: 45
+    cap: 65
     tools: {deflated_sharpe: 35, pbo: 30, haircut_sharpe: 25, purged_cv: 25, data_snooping: 25}
   significance:
     cap: 40

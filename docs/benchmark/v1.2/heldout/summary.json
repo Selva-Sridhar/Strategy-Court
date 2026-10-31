@@ -1,0 +1,429 @@
+{
+  "n_cases": 110,
+  "splits": [
+    "heldout"
+  ],
+  "rubric_versions": [
+    "1.2.0+90f6459e"
+  ],
+  "headline": {
+    "verdict_accuracy": {
+      "k": 93,
+      "n": 110,
+      "rate": 0.8454545454545455,
+      "ci95": [
+        0.7663816228679399,
+        0.9012134763806012
+      ]
+    },
+    "flaw_conviction_rate": {
+      "k": 46,
+      "n": 60,
+      "rate": 0.7666666666666667,
+      "ci95": [
+        0.6456372962239805,
+        0.8556043826335717
+      ]
+    },
+    "flaw_rejection_rate": {
+      "k": 55,
+      "n": 60,
+      "rate": 0.9166666666666666,
+      "ci95": [
+        0.8193105798166558,
+        0.9638795433982692
+      ]
+    },
+    "false_conviction_rate_genuine": {
+      "k": 3,
+      "n": 20,
+      "rate": 0.15,
+      "ci95": [
+        0.052368745896216595,
+        0.36041886474075696
+      ]
+    },
+    "false_acquittal_rate_no_edge": {
+      "k": 0,
+      "n": 30,
+      "rate": 0.0,
+      "ci95": [
+        0.0,
+        0.11351339317396876
+      ]
+    }
+  },
+  "per_truth": {
+    "genuine": {
+      "target": "not_convicted",
+      "meets_target": {
+        "k": 17,
+        "n": 20,
+        "rate": 0.85,
+        "ci95": [
+          0.6395811352592431,
+          0.9476312541037835
+        ]
+      },
+      "convicted": {
+        "k": 3,
+        "n": 20,
+        "rate": 0.15,
+        "ci95": [
+          0.052368745896216595,
+          0.36041886474075696
+        ]
+      },
+      "acquitted": {
+        "k": 9,
+        "n": 20,
+        "rate": 0.45,
+        "ci95": [
+          0.2581978582556243,
+          0.6579146575496577
+        ]
+      },
+      "expected_tool_flagged": {
+        "k": 0,
+        "n": 0,
+        "rate": null,
+        "ci95": [
+          0.0,
+          1.0
+        ]
+      },
+      "mean_claimed_sharpe": 0.6428194432278105,
+      "mean_score": 67.8125
+    },
+    "no_edge": {
+      "target": "not_acquitted",
+      "meets_target": {
+        "k": 30,
+        "n": 30,
+        "rate": 1.0,
+        "ci95": [
+          0.8864866068260312,
+          0.9999999999999999
+        ]
+      },
+      "convicted": {
+        "k": 2,
+        "n": 30,
+        "rate": 0.06666666666666667,
+        "ci95": [
+          0.018477023791270378,
+          0.2132345836261692
+        ]
+      },
+      "acquitted": {
+        "k": 0,
+        "n": 30,
+        "rate": 0.0,
+        "ci95": [
+          0.0,
+          0.11351339317396876
+        ]
+      },
+      "expected_tool_flagged": {
+        "k": 30,
+        "n": 30,
+        "rate": 1.0,
+        "ci95": [
+          0.8864866068260312,
+          0.9999999999999999
+        ]
+      },
+      "mean_claimed_sharpe": -0.3434939435707335,
+      "mean_score": 56.833333333333336
+    },
+    "lookahead": {
+      "target": "convicted",
+      "meets_target": {
+        "k": 10,
+        "n": 10,
+        "rate": 1.0,
+        "ci95": [
+          0.7224672001371107,
+          0.9999999999999999
+        ]
+      },
+      "convicted": {
+        "k": 10,
+        "n": 10,
+        "rate": 1.0,
+        "ci95": [
+          0.7224672001371107,
+          0.9999999999999999
+        ]
+      },
+      "acquitted": {
+        "k": 0,
+        "n": 10,
+        "rate": 0.0,
+        "ci95": [
+          0.0,
+          0.2775327998628892
+        ]
+      },
+      "expected_tool_flagged": {
+        "k": 10,
+        "n": 10,
+        "rate": 1.0,
+        "ci95": [
+          0.7224672001371107,
+          0.9999999999999999
+        ]
+      },
+      "mean_claimed_sharpe": 3.546771224834843,
+      "mean_score": 0.0
+    },
+    "scaler_leak": {
+      "target": "convicted",
+      "meets_target": {
+        "k": 10,
+        "n": 10,
+        "rate": 1.0,
+        "ci95": [
+          0.7224672001371107,
+          0.9999999999999999
+        ]
+      },
+      "convicted": {
+        "k": 10,
+        "n": 10,
+        "rate": 1.0,
+        "ci95": [
+          0.7224672001371107,
+          0.9999999999999999
+        ]
+      },
+      "acquitted": {
+        "k": 0,
+        "n": 10,
+        "rate": 0.0,
+        "ci95": [
+          0.0,
+          0.2775327998628892
+        ]
+      },
+      "expected_tool_flagged": {
+        "k": 10,
+        "n": 10,
+        "rate": 1.0,
+        "ci95": [
+          0.7224672001371107,
+          0.9999999999999999
+        ]
+      },
+      "mean_claimed_sharpe": 0.9332684616646432,
+      "mean_score": 0.0
+    },
+    "best_of_n_disclosed": {
+      "target": "convicted",
+      "meets_target": {
+        "k": 9,
+        "n": 10,
+        "rate": 0.9,
+        "ci95": [
+          0.5958499732047615,
+          0.9821237869049271
+        ]
+      },
+      "convicted": {
+        "k": 9,
+        "n": 10,
+        "rate": 0.9,
+        "ci95": [
+          0.5958499732047615,
+          0.9821237869049271
+        ]
+      },
+      "acquitted": {
+        "k": 0,
+        "n": 10,
+        "rate": 0.0,
+        "ci95": [
+          0.0,
+          0.2775327998628892
+        ]
+      },
+      "expected_tool_flagged": {
+        "k": 10,
+        "n": 10,
+        "rate": 1.0,
+        "ci95": [
+          0.7224672001371107,
+          0.9999999999999999
+        ]
+      },
+      "mean_claimed_sharpe": 0.8029831964017721,
+      "mean_score": 19.375
+    },
+    "best_of_n_hidden": {
+      "target": "convicted",
+      "meets_target": {
+        "k": 1,
+        "n": 10,
+        "rate": 0.1,
+        "ci95": [
+          0.017876213095072896,
+          0.4041500267952385
+        ]
+      },
+      "convicted": {
+        "k": 1,
+        "n": 10,
+        "rate": 0.1,
+        "ci95": [
+          0.017876213095072896,
+          0.4041500267952385
+        ]
+      },
+      "acquitted": {
+        "k": 5,
+        "n": 10,
+        "rate": 0.5,
+        "ci95": [
+          0.236593090512564,
+          0.7634069094874361
+        ]
+      },
+      "expected_tool_flagged": {
+        "k": 9,
+        "n": 10,
+        "rate": 0.9,
+        "ci95": [
+          0.5958499732047615,
+          0.9821237869049271
+        ]
+      },
+      "mean_claimed_sharpe": 0.8029831964017721,
+      "mean_score": 66.25
+    },
+    "zero_cost": {
+      "target": "convicted",
+      "meets_target": {
+        "k": 10,
+        "n": 10,
+        "rate": 1.0,
+        "ci95": [
+          0.7224672001371107,
+          0.9999999999999999
+        ]
+      },
+      "convicted": {
+        "k": 10,
+        "n": 10,
+        "rate": 1.0,
+        "ci95": [
+          0.7224672001371107,
+          0.9999999999999999
+        ]
+      },
+      "acquitted": {
+        "k": 0,
+        "n": 10,
+        "rate": 0.0,
+        "ci95": [
+          0.0,
+          0.2775327998628892
+        ]
+      },
+      "expected_tool_flagged": {
+        "k": 10,
+        "n": 10,
+        "rate": 1.0,
+        "ci95": [
+          0.7224672001371107,
+          0.9999999999999999
+        ]
+      },
+      "mean_claimed_sharpe": 1.817677391259719,
+      "mean_score": 5.5
+    },
+    "survivorship": {
+      "target": "convicted",
+      "meets_target": {
+        "k": 6,
+        "n": 10,
+        "rate": 0.6,
+        "ci95": [
+          0.31267376973365824,
+          0.8318196702937638
+        ]
+      },
+      "convicted": {
+        "k": 6,
+        "n": 10,
+        "rate": 0.6,
+        "ci95": [
+          0.31267376973365824,
+          0.8318196702937638
+        ]
+      },
+      "acquitted": {
+        "k": 0,
+        "n": 10,
+        "rate": 0.0,
+        "ci95": [
+          0.0,
+          0.2775327998628892
+        ]
+      },
+      "expected_tool_flagged": {
+        "k": 8,
+        "n": 10,
+        "rate": 0.8,
+        "ci95": [
+          0.49016247153664183,
+          0.9433178485456247
+        ]
+      },
+      "mean_claimed_sharpe": 0.6251340860554462,
+      "mean_score": 28.25
+    }
+  },
+  "confusion": {
+    "genuine": {
+      "acquitted": 9,
+      "not_proven": 8,
+      "convicted": 3
+    },
+    "no_edge": {
+      "acquitted": 0,
+      "not_proven": 28,
+      "convicted": 2
+    },
+    "lookahead": {
+      "acquitted": 0,
+      "not_proven": 0,
+      "convicted": 10
+    },
+    "scaler_leak": {
+      "acquitted": 0,
+      "not_proven": 0,
+      "convicted": 10
+    },
+    "best_of_n_disclosed": {
+      "acquitted": 0,
+      "not_proven": 1,
+      "convicted": 9
+    },
+    "best_of_n_hidden": {
+      "acquitted": 5,
+      "not_proven": 4,
+      "convicted": 1
+    },
+    "zero_cost": {
+      "acquitted": 0,
+      "not_proven": 0,
+      "convicted": 10
+    },
+    "survivorship": {
+      "acquitted": 0,
+      "not_proven": 4,
+      "convicted": 6
+    }
+  },
+  "mean_seconds_per_case": 1.6545069545453193
+}

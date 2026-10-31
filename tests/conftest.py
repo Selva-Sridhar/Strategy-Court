@@ -16,6 +16,8 @@ def _docker_available() -> bool:
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
     docker_ok = _docker_available()
+    if os.environ.get("STRATEGY_COURT_REQUIRE_DOCKER") == "1" and not docker_ok:
+        pytest.exit("STRATEGY_COURT_REQUIRE_DOCKER=1 but no Docker daemon is available", 3)
     live_llm_ok = os.environ.get("STRATEGY_COURT_LIVE_LLM") == "1"
     network_ok = os.environ.get("STRATEGY_COURT_NETWORK") == "1"
     skip_docker = pytest.mark.skip(reason="Docker daemon not available")

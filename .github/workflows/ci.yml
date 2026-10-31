@@ -19,5 +19,18 @@ jobs:
           uv run ruff format --check src tests
       - name: Typecheck
         run: uv run mypy
-      - name: Tests (incl. Docker sandbox; GitHub runners have Docker)
-        run: uv run pytest -m "not live_llm"
+      - name: Tests
+        run: uv run pytest -m "not live_llm and not docker"
+      - name: Docker sandbox isolation tests (must run, never skip)
+        env:
+          STRATEGY_COURT_REQUIRE_DOCKER: "1"
+        run: |
+          uv run pytest -m docker -rA --junitxml=docker-tests.xml
+          uv run python - <<'EOF'
+          import xml.etree.ElementTree as ET
+          s = ET.parse("docker-tests.xml").getroot().find("testsuite")
+          tests, fail, err, skip = (int(s.get(k, 0)) for k in ("tests", "failures", "errors", "skipped"))
+          msg = f"{tests - fail - err - skip} passed, {fail + err} failed, {skip} skipped of {tests}"
+          print(f"::notice title=Docker sandbox tests::{msg}")
+          raise SystemExit(1 if (fail or err or skip or tests == 0) else 0)
+          EOF
